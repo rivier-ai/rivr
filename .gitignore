@@ -1,0 +1,16 @@
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Editors
+.DS_Store
+.vscode/
+.idea/
+
+# Node (in case any tooling brings it in)
+node_modules/
+
+# Local env
+.env
+.env.local

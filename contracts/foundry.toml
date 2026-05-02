@@ -1,0 +1,43 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 10_000
+via_ir = true
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "erc721a/=lib/ERC721A/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "solady/=lib/solady/src/",
+    # ── Chainlink CCIP (BUSL-1.1, vendored under lib/, NOT in our compile graph) ──
+    # The chainlink-ccip Solidity sources live at lib/chainlink-ccip/chains/evm/contracts/
+    # and depend on a pinned set of OZ + chainlink core contracts that pnpm installs into
+    # lib/chainlink-ccip/chains/evm/node_modules/. The version-suffixed prefixes (e.g.
+    # @openzeppelin/contracts@5.3.0) don't collide with our root-level OZ remapping
+    # because forge does longest-prefix matching.
+    #
+    # CI prerequisite: `pnpm install --ignore-workspace --dir lib/chainlink-ccip/chains/evm`
+    # before `forge build` / `forge test`.
+    "@chainlink/contracts-ccip/=lib/chainlink-ccip/chains/evm/contracts/",
+    "@chainlink/contracts/=lib/chainlink-ccip/chains/evm/node_modules/@chainlink/contracts/",
+    "@chainlink/policy-management/=lib/chainlink-ccip/chains/evm/node_modules/@chainlink/ace/packages/policy-management/src/",
+    "@openzeppelin/contracts@4.8.3/=lib/chainlink-ccip/chains/evm/node_modules/@openzeppelin/contracts-4.8.3/",
+    "@openzeppelin/contracts@5.3.0/=lib/chainlink-ccip/chains/evm/node_modules/@openzeppelin/contracts-5.3.0/",
+]
+
+# Tenzro EVM — see CLAUDE.md and tenzro.com/docs
+[rpc_endpoints]
+tenzro_testnet = "${TENZRO_RPC_URL}"
+
+[etherscan]
+# Tenzro explorer TBD — no etherscan-compatible verifier documented yet.
+
+# ---- Profile: CI (stricter) ----
+[profile.ci]
+fuzz_runs = 1000
+verbosity = 3
