@@ -33,8 +33,15 @@ contract RivierKyaRegistry is IRivierKyaRegistry, AccessControl {
 
     mapping(bytes32 credentialHash => KyaRecord) private _records;
 
+    /// @notice Reverts when `revokeCredential` is invoked against a
+    ///         credentialHash that was never recorded.
     error UnknownCredential(bytes32 credentialHash);
 
+    /// @notice Deploy the registry with an admin and the initial sync wallet.
+    /// @param admin       DEFAULT_ADMIN_ROLE recipient. MUST NOT be zero.
+    /// @param syncWallet  Initial KYA_SYNC_ROLE holder — the rivier-identity
+    ///                    multi-sig that mirrors W3C VCs from
+    ///                    did:web:identity.rivier.ai. MUST NOT be zero.
     constructor(address admin, address syncWallet) {
         require(admin != address(0), "RIVR-KYA: admin zero");
         require(syncWallet != address(0), "RIVR-KYA: sync zero");

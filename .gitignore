@@ -2,6 +2,7 @@
 contracts/cache/
 contracts/out/
 contracts/broadcast/
+contracts/lcov.info
 
 # Editors
 .DS_Store

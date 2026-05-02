@@ -50,12 +50,27 @@ contract RivierMandateRegistry is IRivierMandateRegistry, AccessControl {
     mapping(bytes32 mandateId => MandateRecord) private _records;
     mapping(address principal => bytes32[]) private _mandatesByPrincipal;
 
+    /// @notice Reverts when a caller asks about a mandate that was never recorded.
     error UnknownMandate(bytes32 mandateId);
+    /// @notice Reverts when `revokeMandate` is invoked by anyone other than the
+    ///         registered principal of `mandateId`.
     error NotPrincipal(bytes32 mandateId, address caller, address expected);
+    /// @notice Reverts when `recordMandateUse` or `revokeMandate` is invoked
+    ///         against a mandate already in the revoked state.
     error MandateAlreadyRevoked(bytes32 mandateId);
+    /// @notice Reverts when a recorded use would push cumulative spend past
+    ///         the per-mandate `maxTotalUsd` cap.
     error CumulativeCapExceeded(bytes32 mandateId, uint256 attempted, uint256 cap);
+    /// @notice Reverts when a subsequent `recordMandateUse` is invoked with
+    ///         metadata (principal / agent / kyaCredentialHash / maxTotalUsd /
+    ///         expiresAt) that does not exactly match the binding image
+    ///         registered on first use.
     error ImmutableFieldChanged(bytes32 mandateId);
 
+    /// @notice Deploy the registry with a single admin authorised to grant
+    ///         `TOKEN_ROLE` (to the RIVR token) and `RECOVERY_ROLE` (to the
+    ///         principal's recovery key holder).
+    /// @param admin DEFAULT_ADMIN_ROLE recipient. MUST NOT be the zero address.
     constructor(address admin) {
         require(admin != address(0), "RIVR-MR: admin zero");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);

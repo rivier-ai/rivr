@@ -62,10 +62,26 @@ contract RivierPolicyHook is IPolicyHook, AccessControl {
     ///      cumulative tracker convention).
     uint256 public constant TRAVEL_RULE_DE_MINIMIS_USD6 = 1_000 * 1e6;
 
+    /// @notice Emitted whenever the KYA registry pointer is (re)assigned —
+    ///         on construction and on each successful `setKyaRegistry`.
     event KyaRegistrySet(address indexed registry);
+    /// @notice Emitted whenever the Chainalysis sanctions oracle pointer is
+    ///         (re)assigned. `address(0)` is a valid value (no-coverage chain).
     event SanctionsOracleSet(address indexed oracle);
+    /// @notice Emitted when the off-chain Travel Rule attestor records a
+    ///         hash that downstream legs may reference via memoHash.
     event TravelRuleAttested(bytes32 indexed attestationHash, address indexed by);
 
+    /// @notice Deploy the policy hook with its admin / timelock / sub-oracles.
+    /// @param admin            DEFAULT_ADMIN_ROLE recipient. MUST NOT be zero.
+    /// @param policyAdmin      POLICY_ADMIN_ROLE recipient — MUST be the 7-day
+    ///                         timelock contract, never an EOA. Authorises
+    ///                         `setKyaRegistry` / `setSanctionsOracle`.
+    /// @param kyaRegistry_     Live KYA registry address. MUST NOT be zero —
+    ///                         token consults this on every mandate-bound leg.
+    /// @param sanctionsOracle_ Chainalysis sanctions oracle address. MAY be
+    ///                         the zero address on chains where Chainalysis
+    ///                         hasn't shipped (Base at deploy time, etc.).
     constructor(
         address admin,
         address policyAdmin,
@@ -90,12 +106,21 @@ contract RivierPolicyHook is IPolicyHook, AccessControl {
 
     // ─── admin (timelock-gated) ──────────────────────────────────────
 
+    /// @notice Repoint the on-chain KYA registry. POLICY_ADMIN_ROLE-gated;
+    ///         in production the admin is the 7-day timelock contract.
+    /// @param registry New KYA registry address. MUST NOT be the zero address.
     function setKyaRegistry(address registry) external onlyRole(POLICY_ADMIN_ROLE) {
         require(registry != address(0), "RIVR-PH: kya zero");
         kyaRegistry = IRivierKyaRegistry(registry);
         emit KyaRegistrySet(registry);
     }
 
+    /// @notice Repoint the Chainalysis sanctions oracle.
+    ///         POLICY_ADMIN_ROLE-gated. `address(0)` is permitted for chains
+    ///         without Chainalysis coverage; the hook then short-circuits
+    ///         the on-chain sanctions check (off-chain enforcement still
+    ///         applies via the API gateway).
+    /// @param oracle New oracle address — `address(0)` permitted.
     function setSanctionsOracle(address oracle) external onlyRole(POLICY_ADMIN_ROLE) {
         // Allow address(0) for chains without Chainalysis coverage.
         sanctionsOracle = IChainalysisSanctionsList(oracle);

@@ -45,17 +45,44 @@ contract RivierStreamRegistry is IRivierStreamRegistry, AccessControl {
 
     mapping(bytes32 streamRef => Stream) private _streams;
 
+    /// @notice Reverts when an operation references a streamRef that was
+    ///         never opened (or has been overwritten — but this registry
+    ///         never deletes records, so "unknown" means "never opened").
     error UnknownStream(bytes32 streamRef);
+    /// @notice Reverts on `openStream` when the deterministic streamRef
+    ///         already exists. Re-opens of the same (payer, recipient,
+    ///         namespace, mandateId, startsAt) tuple are rejected.
     error StreamAlreadyExists(bytes32 streamRef);
+    /// @notice Reverts on `withdrawFromStream` when the stream is paused
+    ///         (auto-pause from PolicyHook or principal pause).
     error StreamPausedError(bytes32 streamRef);
+    /// @notice Reverts on `resumeStream` when the stream is not currently
+    ///         paused.
     error StreamNotPaused(bytes32 streamRef);
+    /// @notice Reserved for the post-launch closeStream-as-final-state path.
+    ///         Currently unused (close truncates the window in-place).
     error StreamClosedError(bytes32 streamRef);
+    /// @notice Reverts on `withdrawFromStream` when the requested amount
+    ///         exceeds the stream's currently-accrued (and not-yet-withdrawn)
+    ///         balance.
     error InsufficientAccrued(bytes32 streamRef, uint256 requested, uint256 available);
+    /// @notice Reverts on `openStream` when `endsAt <= startsAt` (zero or
+    ///         negative-duration window).
     error InvalidStreamWindow(uint64 startsAt, uint64 endsAt);
+    /// @notice Reverts on `openStream` when `ratePerSecond == 0` (would
+    ///         produce a permanently-zero accrual stream).
     error InvalidRate(uint256 ratePerSecond);
+    /// @notice Reverts on `closeStream` / `closeStreamFor` when the caller
+    ///         is neither the payer nor the recipient of the stream.
     error NotPayerOrRecipient(bytes32 streamRef, address caller);
+    /// @notice Reverts on `resumeStream` when called by anyone other than
+    ///         the registered payer.
     error NotPayer(bytes32 streamRef, address caller, address payer);
 
+    /// @notice Deploy the registry with a single admin authorised to grant
+    ///         `TOKEN_ROLE` (to the RIVR token) and `POLICY_HOOK_ROLE`
+    ///         (to the PolicyHook for auto-pause callbacks).
+    /// @param admin DEFAULT_ADMIN_ROLE recipient. MUST NOT be the zero address.
     constructor(address admin) {
         require(admin != address(0), "RIVR-SR: admin zero");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
